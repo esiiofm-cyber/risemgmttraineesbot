@@ -290,26 +290,6 @@ body {
   line-height: inherit;
 }
 
-.race-word-slot {
-  display: inline-block;
-  vertical-align: baseline;
-  min-width: calc(var(--slot-ch, 1) * 1ch);
-  text-align: left;
-  white-space: nowrap;
-  box-sizing: content-box;
-}
-
-.race-word-slot--current {
-  max-width: calc(var(--slot-ch, 1) * 1ch);
-  overflow: hidden;
-}
-
-.race-word-slot--done .race-done-run,
-.race-word-slot--future .race-future-plain {
-  display: inline;
-}
-
-
 .race-done-run {
   display: inline;
   font-size: inherit;
@@ -327,13 +307,12 @@ body {
 
 
 .race-current {
-  display: block;
+  display: inline;
   position: relative;
   font-size: inherit;
   font-weight: 400;
   white-space: nowrap;
-  width: 100%;
-  min-width: 0;
+  vertical-align: baseline;
 }
 
 .race-word__inner {
@@ -352,7 +331,6 @@ body {
   max-width: 100%;
   background: linear-gradient(90deg, #a78bfa, #c4b5fd);
   border-radius: 2px;
-  transition: width 0.06s ease-out;
   pointer-events: none;
 }
 

@@ -605,24 +605,11 @@ async function load() {
     return html;
   }
 
-  /**
-   * Extra `ch` reserved for the **active** word only so mistyped characters do not push the
-   * rest of the passage. Done/future words use natural width so text wraps like a normal line.
-   */
-  const RACE_WORD_SLOT_PAD_CH = 8;
-
-  function slotChForWord(w, role) {
-    const base = Math.max(1, w.length);
-    if (role === 'current') return base + RACE_WORD_SLOT_PAD_CH;
-    return base;
-  }
-
   function renderPassage() {
     if (completed) {
-      const parts = wordList.map((w) => {
-        const sc = slotChForWord(w, 'done');
-        return `<span class="race-word-slot race-word-slot--done" style="--slot-ch:${sc}"><span class="race-done-run">${escapeHtml(w)}</span></span>`;
-      });
+      const parts = wordList.map(
+        (w) => `<span class="race-done-run">${escapeHtml(w)}</span>`,
+      );
       racePassage.innerHTML = `<div class="race-flow race-flow--static">${parts.join(' ')}</div>`;
       return;
     }
@@ -630,23 +617,17 @@ async function load() {
     const parts = [];
     for (let i = 0; i < wordList.length; i += 1) {
       const w = wordList[i];
-      const role = i < wordIndex ? 'done' : i === wordIndex ? 'current' : 'future';
-      const sc = slotChForWord(w, role);
       if (i < wordIndex) {
-        parts.push(
-          `<span class="race-word-slot race-word-slot--done" style="--slot-ch:${sc}"><span class="race-done-run">${escapeHtml(w)}</span></span>`,
-        );
+        parts.push(`<span class="race-done-run">${escapeHtml(w)}</span>`);
       } else if (i === wordIndex) {
         const pm = prefixMatchLen(w, normalizeWord(wordInput.value));
         const up = w.length ? (pm / w.length) * 100 : 0;
         const inner = renderCurrentWordInner(w, wordInput.value);
         parts.push(
-          `<span class="race-word-slot race-word-slot--current" style="--slot-ch:${sc}"><span class="race-current" style="--u:${up}"><span class="race-word__inner">${inner}</span></span></span>`,
+          `<span class="race-current" style="--u:${up}"><span class="race-word__inner">${inner}</span></span>`,
         );
       } else {
-        parts.push(
-          `<span class="race-word-slot race-word-slot--future" style="--slot-ch:${sc}"><span class="race-future-plain">${escapeHtml(w)}</span></span>`,
-        );
+        parts.push(`<span class="race-future-plain">${escapeHtml(w)}</span>`);
       }
     }
     racePassage.innerHTML = `<div class="race-flow race-flow--static">${parts.join(' ')}</div>`;
