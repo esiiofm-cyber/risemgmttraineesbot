@@ -5,6 +5,7 @@ import { verifyRoundProofDetailed } from '../lib/round-proof.js';
 import { verifySpeedQaProofDetailed } from '../lib/speed-qa-proof.js';
 import { verifyTypingReceiptDetailed } from '../lib/typing-receipt.js';
 import { verifySignedTokenDetailed } from '../lib/verify-token.js';
+import { safeResultsChannelName } from '../lib/safe-channel-name.js';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -137,12 +138,6 @@ function truncateField(s, maxLen) {
   return `${t.slice(0, maxLen - 1)}…`;
 }
 
-function safeResultsChannelName(uid) {
-  const u = String(uid).replace(/\D/g, '').slice(-12) || 'applicant';
-  const name = `bench-${u}`.toLowerCase().slice(0, 100);
-  return name || 'typing-results';
-}
-
 function privateResultsOverwrites(guildId, staffRoleId, applicantUserId) {
   return [
     { id: guildId, type: 0, allow: '0', deny: String(VIEW_CHANNEL) },
@@ -164,6 +159,10 @@ const MAX_EMBED_DESC = 3900;
 const MAX_EMBEDS_PER_MESSAGE = 10;
 const MAX_EMBED_CHARS_PER_MESSAGE = 5500;
 
+function escapeDiscordCodeFence(s) {
+  return String(s).replace(/```/g, '`\u200b``');
+}
+
 function buildApplicationResultsMarkdown({
   wpmR,
   accR,
@@ -174,32 +173,33 @@ function buildApplicationResultsMarkdown({
 }) {
   const attempts = Array.isArray(perW) ? perW.length : 0;
   const lines = [];
-  lines.push('# APPLICATION RESULTS');
+  lines.push('**APPLICATION RESULTS**');
   lines.push('');
-  lines.push('# 1. Speed Test');
-  lines.push(`WPM: ${wpmR}  Attempts: ${attempts}  Accuracy: ${accR}%`);
+  lines.push('**1 · Speed test**');
+  lines.push(`WPM: **${wpmR}** · Attempts: **${attempts}** · Accuracy: **${accR}%**`);
   lines.push('');
-  lines.push('# 2. Speed Q&A');
+  lines.push('**2 · Speed Q&A**');
   lines.push('');
   for (const p of pairs) {
     lines.push(`**${truncateField(p.q, 500)}**`);
-    lines.push('');
-    lines.push(truncateField(p.reply, 900));
-    lines.push('');
-    lines.push(`${Number(p.elapsed).toFixed(2)} sec`);
+    lines.push('```');
+    lines.push(escapeDiscordCodeFence(truncateField(p.reply, 880)));
+    lines.push('```');
+    lines.push(`_${Number(p.elapsed).toFixed(2)} s_`);
     lines.push('');
   }
-  lines.push('# The Questionnaire');
+  lines.push('**3 · Questionnaire**');
   lines.push('');
   for (let i = 0; i < APPLICATION_QUESTIONS.length; i += 1) {
-    lines.push(`**${APPLICATION_QUESTIONS[i].label}**`);
-    lines.push('');
-    lines.push(truncateField(answers[i] ?? '', 1200));
+    lines.push(`**${truncateField(APPLICATION_QUESTIONS[i].label, 500)}**`);
+    lines.push('```');
+    lines.push(escapeDiscordCodeFence(truncateField(answers[i] ?? '', 1100)));
+    lines.push('```');
     lines.push('');
   }
-  lines.push('# Voice Note');
+  lines.push('**4 · Voice note**');
   lines.push('');
-  lines.push(`${voiceFileName || 'voice-note.mp3'} *(attached to this message)*`);
+  lines.push(`_${voiceFileName || 'voice-note.mp3'} (attached to this message)_`);
   return lines.join('\n').trim();
 }
 
@@ -381,7 +381,7 @@ async function handlePost(context) {
   let newChannel;
   try {
     newChannel = await discordCreateGuildChannel(env, gid, {
-      name: safeResultsChannelName(uid),
+      name: safeResultsChannelName(uid, typeof p.un === 'string' ? p.un : ''),
       type: 0,
       parent_id: categoryId,
       permission_overwrites: overwrites,

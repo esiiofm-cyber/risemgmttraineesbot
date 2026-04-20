@@ -606,19 +606,21 @@ async function load() {
   }
 
   /**
-   * Extra `ch` reserved for every word so: (1) typos in the active word do not push the rest,
-   * and (2) moving from active → done does not shrink the slot and shift following words.
+   * Extra `ch` reserved for the **active** word only so mistyped characters do not push the
+   * rest of the passage. Done/future words use natural width so text wraps like a normal line.
    */
-  const RACE_WORD_SLOT_PAD_CH = 12;
+  const RACE_WORD_SLOT_PAD_CH = 8;
 
-  function slotChForWord(w) {
-    return Math.max(1, w.length) + RACE_WORD_SLOT_PAD_CH;
+  function slotChForWord(w, role) {
+    const base = Math.max(1, w.length);
+    if (role === 'current') return base + RACE_WORD_SLOT_PAD_CH;
+    return base;
   }
 
   function renderPassage() {
     if (completed) {
       const parts = wordList.map((w) => {
-        const sc = slotChForWord(w);
+        const sc = slotChForWord(w, 'done');
         return `<span class="race-word-slot race-word-slot--done" style="--slot-ch:${sc}"><span class="race-done-run">${escapeHtml(w)}</span></span>`;
       });
       racePassage.innerHTML = `<div class="race-flow race-flow--static">${parts.join(' ')}</div>`;
@@ -628,7 +630,8 @@ async function load() {
     const parts = [];
     for (let i = 0; i < wordList.length; i += 1) {
       const w = wordList[i];
-      const sc = slotChForWord(w);
+      const role = i < wordIndex ? 'done' : i === wordIndex ? 'current' : 'future';
+      const sc = slotChForWord(w, role);
       if (i < wordIndex) {
         parts.push(
           `<span class="race-word-slot race-word-slot--done" style="--slot-ch:${sc}"><span class="race-done-run">${escapeHtml(w)}</span></span>`,

@@ -4,6 +4,7 @@ import { verifySpeedQaProofDetailed } from '../../lib/speed-qa-proof.js';
 import { verifyRoundProofDetailed } from '../../lib/round-proof.js';
 import { verifyTypingReceiptDetailed } from '../../lib/typing-receipt.js';
 import { verifySignedTokenDetailed } from '../../lib/verify-token.js';
+import { safeResultsChannelName } from '../../lib/safe-channel-name.js';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -111,10 +112,8 @@ function truncateField(s, maxLen) {
   return `${t.slice(0, maxLen - 1)}…`;
 }
 
-function safeResultsChannelName(uid) {
-  const u = String(uid).replace(/\D/g, '').slice(-12) || 'applicant';
-  const name = `bench-${u}`.toLowerCase().slice(0, 100);
-  return name || 'typing-results';
+function escapeDiscordCodeFence(s) {
+  return String(s).replace(/```/g, '`\u200b``');
 }
 
 const PERM_THREAD = '68608';
@@ -209,10 +208,11 @@ async function handlePost(context) {
 
   const totalSec = pairs.reduce((s, x) => s + x.elapsed, 0);
   const avgSec = totalSec / pairs.length;
-  const fieldLines = pairs.map(
-    (x, i) =>
-      `**${i + 1}.** ${truncateField(x.q, 180)}\n↳ **Reply:** ${truncateField(x.reply, 380)}\n↳ **Time:** **${x.elapsed.toFixed(2)}s**`,
-  );
+  const fieldLines = pairs.map((x, i) => {
+    const q = truncateField(x.q, 160);
+    const r = escapeDiscordCodeFence(truncateField(x.reply, 520));
+    return `**${i + 1}.** ${q}\n\`\`\`\n${r}\n\`\`\`\n_${x.elapsed.toFixed(2)} s_`;
+  });
 
   const typingLines = perW
     .map((w, i) => `**${i + 1}.** ${Number(w).toFixed(1)} WPM · ${Number(perA[i]).toFixed(1)}%`)
@@ -224,7 +224,7 @@ async function handlePost(context) {
   let newChannel;
   try {
     newChannel = await discordCreateGuildChannel(env, gid, {
-      name: safeResultsChannelName(uid),
+      name: safeResultsChannelName(uid, typeof p.un === 'string' ? p.un : ''),
       type: 0,
       parent_id: categoryId,
       permission_overwrites: overwrites,
@@ -263,7 +263,7 @@ async function handlePost(context) {
             },
             {
               name: 'Questions & replies',
-              value: fieldLines.join('\n\n').slice(0, 4096),
+              value: fieldLines.join('\n\n').slice(0, 1024),
               inline: false,
             },
           ],
