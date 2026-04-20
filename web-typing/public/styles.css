@@ -286,6 +286,29 @@ body {
   overflow-wrap: break-word;
 }
 
+.race-flow--static {
+  line-height: inherit;
+}
+
+.race-word-slot {
+  display: inline-block;
+  vertical-align: baseline;
+  min-width: calc(var(--slot-ch, 1) * 1ch);
+  text-align: left;
+  white-space: nowrap;
+  box-sizing: content-box;
+}
+
+.race-word-slot--current {
+  max-width: calc(var(--slot-ch, 1) * 1ch);
+  overflow: hidden;
+}
+
+.race-word-slot--done .race-done-run,
+.race-word-slot--future .race-future-plain {
+  display: inline;
+}
+
 
 .race-done-run {
   display: inline;
@@ -304,11 +327,13 @@ body {
 
 
 .race-current {
-  display: inline;
+  display: block;
   position: relative;
   font-size: inherit;
   font-weight: 400;
   white-space: nowrap;
+  width: 100%;
+  min-width: 0;
 }
 
 .race-word__inner {

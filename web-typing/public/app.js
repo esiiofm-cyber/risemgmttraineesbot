@@ -52,10 +52,13 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+/**
+ * Patched lame (`lamejs-121-bug`) — official `lamejs@1.2.1` often breaks in ESM with `MPEGMode is not defined`.
+ */
 let lamejsLoadPromise = null;
 function loadLamejs() {
   if (!lamejsLoadPromise) {
-    lamejsLoadPromise = import('https://esm.sh/lamejs@1.2.1').then((m) => m.default || m);
+    lamejsLoadPromise = import('https://esm.sh/lamejs-121-bug@1.2.3').then((m) => m.default || m);
   }
   return lamejsLoadPromise;
 }
@@ -94,6 +97,7 @@ function audioBufferToMonoInt16(audioBuffer) {
   return out;
 }
 
+/** Decode WebM/OGG/etc. in-browser and encode real MP3 bytes for Discord’s inline audio player. */
 async function audioBlobToMp3File(blob) {
   const mime = String(blob.type || '').toLowerCase();
   const name = String(blob instanceof File ? blob.name : '').toLowerCase();
@@ -118,10 +122,11 @@ async function audioBlobToMp3File(blob) {
   }
 
   const lamejs = await loadLamejs();
-  if (!lamejs || typeof lamejs.Mp3Encoder !== 'function') {
+  const Mp3Encoder = lamejs.Mp3Encoder;
+  if (!Mp3Encoder || typeof Mp3Encoder !== 'function') {
     throw new Error('MP3 encoder failed to load');
   }
-  const encoder = new lamejs.Mp3Encoder(1, 44100, 128);
+  const encoder = new Mp3Encoder(1, 44100, 128);
   const block = 1152;
   const parts = [];
   for (let i = 0; i < samples.length; i += block) {
@@ -600,30 +605,48 @@ async function load() {
     return html;
   }
 
+  /**
+   * Extra `ch` reserved for every word so: (1) typos in the active word do not push the rest,
+   * and (2) moving from active → done does not shrink the slot and shift following words.
+   */
+  const RACE_WORD_SLOT_PAD_CH = 12;
+
+  function slotChForWord(w) {
+    return Math.max(1, w.length) + RACE_WORD_SLOT_PAD_CH;
+  }
+
   function renderPassage() {
     if (completed) {
-      racePassage.innerHTML = `<div class="race-flow"><span class="race-done-run">${escapeHtml(expectedNorm)}</span></div>`;
+      const parts = wordList.map((w) => {
+        const sc = slotChForWord(w);
+        return `<span class="race-word-slot race-word-slot--done" style="--slot-ch:${sc}"><span class="race-done-run">${escapeHtml(w)}</span></span>`;
+      });
+      racePassage.innerHTML = `<div class="race-flow race-flow--static">${parts.join(' ')}</div>`;
       return;
     }
 
-    let html = '<div class="race-flow">';
-    if (wordIndex > 0) {
-      html += `<span class="race-done-run">${escapeHtml(accepted.join(' '))}</span>`;
-    }
-    if (wordIndex < wordList.length) {
-      const w = wordList[wordIndex];
-      if (wordIndex > 0) html += ' ';
-      const pm = prefixMatchLen(w, normalizeWord(wordInput.value));
-      const up = w.length ? (pm / w.length) * 100 : 0;
-      const inner = renderCurrentWordInner(w, wordInput.value);
-      html += `<span class="race-current" style="--u:${up}"><span class="race-word__inner">${inner}</span></span>`;
-      const rest = wordList.slice(wordIndex + 1);
-      if (rest.length > 0) {
-        html += ` <span class="race-future-plain">${escapeHtml(rest.join(' '))}</span>`;
+    const parts = [];
+    for (let i = 0; i < wordList.length; i += 1) {
+      const w = wordList[i];
+      const sc = slotChForWord(w);
+      if (i < wordIndex) {
+        parts.push(
+          `<span class="race-word-slot race-word-slot--done" style="--slot-ch:${sc}"><span class="race-done-run">${escapeHtml(w)}</span></span>`,
+        );
+      } else if (i === wordIndex) {
+        const pm = prefixMatchLen(w, normalizeWord(wordInput.value));
+        const up = w.length ? (pm / w.length) * 100 : 0;
+        const inner = renderCurrentWordInner(w, wordInput.value);
+        parts.push(
+          `<span class="race-word-slot race-word-slot--current" style="--slot-ch:${sc}"><span class="race-current" style="--u:${up}"><span class="race-word__inner">${inner}</span></span></span>`,
+        );
+      } else {
+        parts.push(
+          `<span class="race-word-slot race-word-slot--future" style="--slot-ch:${sc}"><span class="race-future-plain">${escapeHtml(w)}</span></span>`,
+        );
       }
     }
-    html += '</div>';
-    racePassage.innerHTML = html;
+    racePassage.innerHTML = `<div class="race-flow race-flow--static">${parts.join(' ')}</div>`;
   }
 
   function accuracyLive() {

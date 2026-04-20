@@ -89,11 +89,9 @@ async function discordPostMultipart(env, channelId, payloadJson, file) {
   const form = new FormData();
   form.append('payload_json', JSON.stringify(payloadJson));
   const bytes = await file.arrayBuffer();
-  const blob = new Blob([bytes], { type: file.type || 'application/octet-stream' });
-  const fn = String(file.name || '').toLowerCase();
-  const defaultName =
-    (file.type || '').includes('mpeg') || fn.endsWith('.mp3') ? 'voice-note.mp3' : 'voice-note.webm';
-  form.append('files[0]', blob, file.name || defaultName);
+  // Real MP3 from the browser encoder; name + MIME help Discord show the inline player (WebM-as-.mp3 does not decode).
+  const blob = new Blob([bytes], { type: 'audio/mpeg' });
+  form.append('files[0]', blob, 'voice-note.mp3');
   const r = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
     method: 'POST',
     headers: {
@@ -184,7 +182,7 @@ function buildApplicationResultsMarkdown({
   lines.push('# 2. Speed Q&A');
   lines.push('');
   for (const p of pairs) {
-    lines.push(`## ${truncateField(p.q, 500)}`);
+    lines.push(`**${truncateField(p.q, 500)}**`);
     lines.push('');
     lines.push(truncateField(p.reply, 900));
     lines.push('');
@@ -194,7 +192,7 @@ function buildApplicationResultsMarkdown({
   lines.push('# The Questionnaire');
   lines.push('');
   for (let i = 0; i < APPLICATION_QUESTIONS.length; i += 1) {
-    lines.push(APPLICATION_QUESTIONS[i].label);
+    lines.push(`**${APPLICATION_QUESTIONS[i].label}**`);
     lines.push('');
     lines.push(truncateField(answers[i] ?? '', 1200));
     lines.push('');
