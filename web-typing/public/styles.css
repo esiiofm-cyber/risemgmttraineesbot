@@ -294,15 +294,10 @@ body {
   display: inline;
   font-size: inherit;
   font-weight: 400;
-  padding: 0 3px;
   margin: 0;
   vertical-align: baseline;
-  border-radius: 4px;
-  color: #b4f5ce;
-  background: rgba(34, 197, 94, 0.18);
-  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.38);
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
+  /* Letter color only — no box/padding (avoids line-height and reflow jumps). */
+  color: #86efac;
 }
 
 
@@ -346,7 +341,6 @@ body {
   font-size: inherit;
   font-weight: inherit;
   letter-spacing: 0;
-  border-radius: 2px;
 }
 
 .rw-ch--ok {
@@ -359,8 +353,7 @@ body {
 }
 
 .rw-ch--bad {
-  color: #fca5a5;
-  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
 }
 
 .rw-ch--extra {
